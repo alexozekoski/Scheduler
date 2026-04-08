@@ -123,11 +123,6 @@ public class Task implements Comparable<Task> {
     public long getDelaySystemTime(long start) {
         long pass = start - this.start;
         if (isInterval() && executions > 0) {
-//            if ("Check status".equals(name)) {
-//                System.out.println(this.start + " " + start);
-//                System.out.println(pass + " aaa " + (interval - pass) + " " + interval);
-//            }
-
             return interval - pass;
         }
         return delay - pass;
