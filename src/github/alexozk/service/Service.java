@@ -67,7 +67,7 @@ public abstract class Service<T> extends Scheduler {
     }
 
     public void forceExecuteAsync() {
-        execute(() -> {
+        execute("Force execute async", () -> {
             mainTask.execute();
         });
     }
@@ -85,6 +85,12 @@ public abstract class Service<T> extends Scheduler {
     protected void afterExecute() {
         listeners.forEach((l) -> {
             l.afterExecute();
+        });
+    }
+
+    protected void executeValue(T value) {
+        listeners.forEach((l) -> {
+            l.executeValue(value);
         });
     }
 
