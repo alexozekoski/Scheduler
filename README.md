@@ -130,5 +130,64 @@ task.cancel();
 task.toJson();
 ```
 
+## Service
+
+### Creating a Service
+
+```java
+public class MyService extends Service<String> {
+
+    public MyService() {
+        super("MyService", 1000);
+    }
+
+    @Override
+    protected void startup() {
+        System.out.println("Service started");
+    }
+
+    @Override
+    protected void execute() {
+        System.out.println("Running task");
+    }
+}
+// Start Service
+MyService service = new MyService();
+service.start();
+
+// Stop Service
+service.shutdown();
+
+// Interval Control
+service.setInterval(2000);
 
 
+```
+
+### Service Manual Execution
+```java
+// Synchronous
+service.forceExecute(); 
+
+service.forceExecute(5000); // wait up to 5s
+
+// Asynchronous
+service.forceExecuteAsync();
+
+```
+
+### Service Listeners
+```java
+service.getListeners().add(new ServiceListener() {
+    @Override
+    public void beforeExecute() {
+        System.out.println("Before execution");
+    }
+
+    @Override
+    public void afterExecute() {
+        System.out.println("After execution");
+    }
+});
+
+```
