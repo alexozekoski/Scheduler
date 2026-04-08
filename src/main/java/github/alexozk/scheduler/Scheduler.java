@@ -8,7 +8,6 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -28,7 +27,7 @@ public class Scheduler implements Runnable {
 
     private volatile long taskId = 1;
 
-    private volatile boolean closeOnCompleteAllTasks = false;
+    private volatile boolean shutdownOnCompleteAllTasks = false;
 
     private volatile LinkedList<Task> tasksDone = new LinkedList();
 
@@ -40,8 +39,22 @@ public class Scheduler implements Runnable {
 
     private boolean virtualThread = false;
 
+    public Scheduler() {
+        this("Scheduler");
+    }
+
     public Scheduler(String name) {
         this(name, false);
+    }
+
+    public Scheduler(Thread executor) {
+        this("Scheduler");
+        this.executor = executor;
+    }
+
+    public Scheduler(String name, Thread executor) {
+        this(name, false);
+        this.executor = executor;
     }
 
     public Scheduler(boolean virtualThread) {
@@ -59,7 +72,7 @@ public class Scheduler implements Runnable {
     }
 
     public synchronized void start() {
-        if (executor != null) {
+        if (executor != null && executor.isAlive()) {
             throw new RuntimeException("Scheduler " + getName() + " is already running");
         }
 
@@ -84,10 +97,6 @@ public class Scheduler implements Runnable {
         }
 
         executor.start();
-    }
-
-    public Scheduler() {
-        this("Scheduler");
     }
 
     @Override
@@ -338,7 +347,7 @@ public class Scheduler implements Runnable {
     }
 
     public synchronized void tryShutdownWhenAllTasksDone() {
-        if (closeOnCompleteAllTasks && !hasTasks()) {
+        if (shutdownOnCompleteAllTasks && !hasTasks()) {
             shutdown();
         }
     }
@@ -419,12 +428,12 @@ public class Scheduler implements Runnable {
         addLogTask(null);
     }
 
-    public boolean isCloseOnCompleteAllTasks() {
-        return closeOnCompleteAllTasks;
+    public boolean isShutdownOnCompleteAllTasks() {
+        return shutdownOnCompleteAllTasks;
     }
 
-    public void setCloseOnCompleteAllTasks(boolean closeOnCompleteAllTasks) {
-        this.closeOnCompleteAllTasks = closeOnCompleteAllTasks;
+    public void setShutdownOnCompleteAllTasks(boolean shutdownOnCompleteAllTasks) {
+        this.shutdownOnCompleteAllTasks = shutdownOnCompleteAllTasks;
     }
 
     public boolean isVirtualThread() {
