@@ -15,4 +15,5 @@ public interface ServiceListener<T> {
 
     public void afterExecute();
 
+    public void executeValue(T value);
 }
