@@ -4,7 +4,6 @@
 package github.alexozk.scheduler;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,13 +16,11 @@ import java.util.concurrent.TimeUnit;
  *
  * @author alexo
  */
-public class Scheduler implements Runnable {
+public class Scheduler {
 
     private final LinkedList<Task> tasks = new LinkedList<>();
 
     private volatile boolean run = true;
-
-    private volatile Task nextTask = null;
 
     private volatile long taskId = 1;
 
@@ -33,99 +30,89 @@ public class Scheduler implements Runnable {
 
     private volatile int logSize = 0;
 
-    private volatile Thread executor;
+    private final ExecutorTask[] executors;
 
     private String name;
 
     private boolean virtualThread = false;
 
+    private volatile boolean started = false;
+
+    public static boolean SHOW_WARNINGS = true;
+
     public Scheduler() {
-        this("Scheduler");
+        this(null);
     }
 
     public Scheduler(String name) {
         this(name, false);
     }
 
-    public Scheduler(Thread executor) {
-        this("Scheduler");
-        this.executor = executor;
+    public Scheduler(String name, int executors) {
+        this(name, executors, 0, false);
     }
 
-    public Scheduler(String name, Thread executor) {
-        this(name, false);
-        this.executor = executor;
+    public Scheduler(int executors) {
+        this(null, executors, 0, false);
     }
 
     public Scheduler(boolean virtualThread) {
         this(null, virtualThread);
     }
 
-    public Scheduler(String name, boolean virtualThread) {
-        this(name, 0, virtualThread);
+    public Scheduler(int executors, boolean virtualThread) {
+        this(null, executors, 0, virtualThread);
     }
 
-    public Scheduler(String name, int logsSize, boolean virtualThread) {
+    public Scheduler(String name, int executors, boolean virtualThread) {
+        this(null, executors, 0, virtualThread);
+    }
+
+    public Scheduler(String name, boolean virtualThread) {
+        this(name, 1, 0, virtualThread);
+    }
+
+    public Scheduler(String name, int executors, int logsSize, boolean virtualThread) {
         setLogSize(logsSize);
-        this.name = name;
+        this.name = name == null ? "Scheduler@" + hashCode() : name;
         this.virtualThread = virtualThread;
+        this.executors = new ExecutorTask[executors];
     }
 
     public synchronized void start() {
-        if (executor != null && executor.isAlive()) {
+        if (executors[0] != null) {
             throw new RuntimeException("Scheduler " + getName() + " is already running");
         }
-
-        try {
-            if (virtualThread) {
-                var ofVirtual = Thread.class.getMethod("ofVirtual");
-                Object builder = ofVirtual.invoke(null);
-
-                var unstarted = builder.getClass().getMethod("unstarted", Runnable.class);
-                executor = (Thread) unstarted.invoke(builder, this);
-            } else {
-                executor = new Thread(this);
-            }
-        } catch (Exception e) {
-            executor = new Thread(this);
-        }
-
-        if (name == null) {
-            executor.setName("Scheduler " + executor.getId());
-        } else {
-            executor.setName(name);
-        }
-
-        executor.start();
-    }
-
-    @Override
-    public void run() {
-        while (run) {
+        for (int i = 0; i < executors.length; i++) {
+            Thread executor;
+            ExecutorTask executorTask = new ExecutorTask();
             try {
-                waitTask();
-                if (nextTask != null && nextTask.getDelaySystemTime() <= 0) {
-                    nextTask.execute();
-                    nextTask = getNextTask();
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
+                if (virtualThread) {
+                    var ofVirtual = Thread.class.getMethod("ofVirtual");
+                    Object builder = ofVirtual.invoke(null);
 
-    private synchronized void waitTask() {
-        long wait = 0;
-        if (nextTask != null) {
-            wait = nextTask.getDelaySystemTime();
-            if (wait <= 0) {
-                return;
+                    var unstarted = builder.getClass().getMethod("unstarted", Runnable.class);
+                    executor = (Thread) unstarted.invoke(builder, executorTask);
+                } else {
+                    executor = new Thread(executorTask);
+                }
+            } catch (Exception e) {
+                executor = new Thread(executorTask);
             }
+
+            if (name == null) {
+                executor.setName("Scheduler " + executor.getId());
+            } else {
+                executor.setName(getExecutorName(i));
+            }
+            executorTask.setThread(executor);
+            executor.start();
+            executors[i] = executorTask;
         }
-        try {
-            wait(wait);
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
+        started = true;
+        // System.out.println(tasks);
+        for (int i = 0; i < this.executors.length && !this.tasks.isEmpty(); i++) {
+            addExecutorTask(this.tasks.removeFirst());
         }
     }
 
@@ -201,11 +188,28 @@ public class Scheduler implements Runnable {
                 throw new RuntimeException("Scheduler " + getName() + " has been shut down and cannot accept new tasks");
             }
             Task task = new Task(taskId++, name, run, delayMili, delayInterval, this, priority);
-            sortTask(task);
-            nextTask = getNextTask();
-            notifyAll();
+
+            if (!addExecutorTask(task)) {
+                sortTask(task);
+            }
             return task;
         }
+    }
+
+    private synchronized boolean addExecutorTask(Task task) {
+        if (!started) {
+            return false;
+        }
+        for (ExecutorTask executorTask : executors) {
+            Task t = executorTask.getTask();
+            if (executorTask.setTaskIfCan(task)) {
+                if (t != null) {
+                    this.tasks.add(t);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     public Task scheduleAtInterval(Runnable run, long delay, long interval, TimeUnit timeUnit) {
@@ -282,7 +286,6 @@ public class Scheduler implements Runnable {
 
     public synchronized boolean cancelTask(Task task) {
         boolean t = tasks.remove(task);
-        nextTask = getNextTask();
         tryShutdownWhenAllTasksDone();
         return t;
     }
@@ -291,23 +294,8 @@ public class Scheduler implements Runnable {
         if (tasks.isEmpty()) {
             return null;
         }
-        Task t = tasks.getFirst();
-        long start = System.currentTimeMillis();
-        boolean first = true;
-        for (Task task : tasks) {
-            if (first) {
-                first = false;
-                continue;
-            }
-            if (task.getDelaySystemTime(start) <= 0) {
-                if (task.getPriority() > t.getPriority()) {
-                    t = task;
-                }
-            } else {
-                break;
-            }
-        }
-        return t;
+        Task next = tasks.removeFirst();
+        return next;
     }
 
     private int sortTask(Task task) {
@@ -317,18 +305,32 @@ public class Scheduler implements Runnable {
         }
         tasks.add(pos, task);
         Collections.sort(tasks);
+        // System.out.println(tasks);
         return pos;
     }
 
     public synchronized void completeTask(Task task) {
-        if (!task.isInterval()) {
-            tasks.remove(task);
+        if (task.isInterval()) {
+            sortTask(task);
         } else {
             tasks.remove(task);
-            sortTask(task);
         }
         addLogTask(task);
+        ExecutorTask executorTask = getExecutor(task);
+        if (executorTask != null) {
+            executorTask.setTask(getNextTask());
+        }
         tryShutdownWhenAllTasksDone();
+    }
+
+    private synchronized ExecutorTask getExecutor(Task task) {
+
+        for (ExecutorTask executor : this.executors) {
+            if (executor != null && executor.isInExecution() && task.equals(executor.getTask())) {
+                return executor;
+            }
+        }
+        return null;
     }
 
     public synchronized void addLogTask(Task task) {
@@ -346,10 +348,12 @@ public class Scheduler implements Runnable {
         }
     }
 
-    public synchronized void tryShutdownWhenAllTasksDone() {
+    public synchronized boolean tryShutdownWhenAllTasksDone() {
         if (shutdownOnCompleteAllTasks && !hasTasks()) {
             shutdown();
+            return true;
         }
+        return false;
     }
 
     public synchronized boolean hasTasksOnInterval() {
@@ -362,13 +366,26 @@ public class Scheduler implements Runnable {
     }
 
     public synchronized boolean hasTasks() {
-        return !tasks.isEmpty();
+        return getTasksSize() > 0;
     }
 
     public synchronized void shutdown() {
-        this.nextTask = null;
         run = false;
-        notifyAll();
+        for (ExecutorTask ex : executors) {
+            if (ex != null) {
+                ex.shutdown();
+            }
+        }
+
+        for (ExecutorTask exec : executors) {
+            if (exec != null) {
+                try {
+                    exec.getThread().join();
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
     }
 
     public boolean isShutdown() {
@@ -376,7 +393,13 @@ public class Scheduler implements Runnable {
     }
 
     public synchronized int getTasksSize() {
-        return tasks.size();
+        int countTask = 0;
+        for (ExecutorTask ex : executors) {
+            if (ex != null && ex.getTask() != null) {
+                countTask++;
+            }
+        }
+        return tasks.size() + countTask;
     }
 
     public synchronized JsonObject toJson() {
@@ -385,24 +408,32 @@ public class Scheduler implements Runnable {
         for (Task t : tasks) {
             ts.add(t.toJson());
         }
-        data.addProperty("id", executor != null ? executor.getId() : null);
-        data.addProperty("name", getName());
-        data.addProperty("is_running", run);
-        data.addProperty("is_interrupted", executor != null ? executor.isInterrupted() : false);
-        data.addProperty("is_alive", executor != null ? executor.isAlive() : false);
-        data.addProperty("is_daemon", executor != null ? executor.isDaemon() : false);
-        data.addProperty("priority", executor != null ? executor.getPriority() : null);
-        StackTracerCode[] tracer = executor != null ? Debugger.getStackTracer(executor) : null;
-        JsonArray st = null;
-        if (tracer != null) {
-            st = new JsonArray(tracer.length);
-            for (StackTracerCode code : tracer) {
-                st.add(code.toJson());
+        JsonArray executors = null;
+        if (this.executors != null) {
+            executors = new JsonArray(this.executors.length);
+            for (int i = 0; i < executors.size(); i++) {
+                ExecutorTask executor = this.executors[i];
+                JsonObject edata = new JsonObject();
+                edata.addProperty("id", executor.getThread().getId());
+                edata.addProperty("name", executor.getThread().getName());
+                edata.addProperty("is_running", run);
+                edata.addProperty("is_interrupted", executor.getThread().isInterrupted());
+                edata.addProperty("is_alive", executor.getThread().isAlive());
+                edata.addProperty("is_daemon", executor.getThread().isDaemon());
+                edata.addProperty("priority", executor.getThread().getPriority());
+                StackTracerCode[] tracer = Debugger.getStackTracer(executor.getThread());
+                JsonArray st = null;
+                if (tracer != null) {
+                    st = new JsonArray(tracer.length);
+                    for (StackTracerCode code : tracer) {
+                        st.add(code.toJson());
+                    }
+                }
+                edata.add("stack_tracer", st);
             }
         }
-
-        data.add("stack_tracer", st);
-        data.add("next_task", nextTask != null ? nextTask.toJson() : JsonNull.INSTANCE);
+        data.add("executors", executors);
+        // data.add("next_task", nextTask != null ? nextTask.toJson() : JsonNull.INSTANCE);
         data.add("tasks", ts);
 
         if (logSize > 0) {
@@ -444,8 +475,24 @@ public class Scheduler implements Runnable {
         this.virtualThread = virtualThread;
     }
 
-    public Thread getExecutor() {
-        return executor;
+    public boolean isSingleThread() {
+        return this.executors.length == 1;
+    }
+
+    public boolean isMultiThread() {
+        return this.executors.length > 1;
+    }
+
+    public Thread[] getExecutors() {
+        Thread[] t = new Thread[this.executors.length];
+        for (int i = 0; i < t.length; i++) {
+            ExecutorTask et = this.executors[i];
+            if (et != null) {
+                t[i] = et.getThread();
+            }
+
+        }
+        return t;
     }
 
     public String getName() {
@@ -454,13 +501,47 @@ public class Scheduler implements Runnable {
 
     public synchronized void setName(String name) {
         this.name = name;
-        if (executor != null) {
-            executor.setName(name);
+        int pos = 0;
+        for (ExecutorTask t : executors) {
+            if (t != null) {
+                t.getThread().setName(getExecutorName(pos++));
+            }
         }
     }
 
     public synchronized List<Task> getCopyTasks() {
-        return new ArrayList(tasks);
+        ArrayList tasks = new ArrayList(this.tasks.size() + this.executors.length);
+        for (ExecutorTask ex : this.executors) {
+            if (ex != null) {
+                Task t = ex.getTask();
+                if (t != null) {
+                    tasks.add(t);
+                }
+            }
+        }
+        Collections.sort(tasks);
+        tasks.addAll(this.tasks);
+        return tasks;
     }
 
+    public String getExecutorName(int index) {
+        return this.executors.length == 1 ? name : name + "#[" + index + "]";
+    }
+
+    protected ExecutorTask getExecutorTaskByThread(Thread thread) {
+        for (ExecutorTask ex : executors) {
+            if (ex != null && ex.getThread().equals(thread)) {
+                return ex;
+            }
+        }
+        return null;
+    }
+
+    public boolean isThreadExecutor(Thread thread) {
+        return getExecutorTaskByThread(Thread.currentThread()) != null;
+    }
+
+    public boolean isCurrentThreadExecutor() {
+        return isThreadExecutor(Thread.currentThread());
+    }
 }

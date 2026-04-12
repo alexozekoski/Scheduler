@@ -6,6 +6,7 @@ package github.alexozk.scheduler;
 
 import com.google.gson.JsonObject;
 import java.util.Date;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,6 +27,7 @@ public class Task implements Comparable<Task> {
     private final long id;
     private volatile Exception error;
     private volatile int priority = 0;
+    private volatile long executionTime = -1;
 
     public Task(long id, String name, Runnable runnable, long delay, long interval, Scheduler scheduler, int priority) {
         this.id = id;
@@ -52,18 +54,20 @@ public class Task implements Comparable<Task> {
             inExcution = true;
             error = null;
         }
+        long startRun = System.currentTimeMillis();
         try {
             runnable.run();
-
         } catch (Exception ex) {
             error = ex;
         }
+        long endRun = System.currentTimeMillis();
 
         synchronized (this) {
+            this.executionTime = startRun - endRun;
             if (!isInterval()) {
                 done = true;
-            }else{
-                start = System.currentTimeMillis();
+            } else {
+                start = startRun;
             }
 
             executions++;
@@ -88,6 +92,18 @@ public class Task implements Comparable<Task> {
 
     public synchronized void get(long timeout) {
         if (!done) {
+            if (scheduler.isCurrentThreadExecutor()) {
+                if (scheduler.isSingleThread()) {
+                    throw new RejectedExecutionException(
+                            "The thread attempting to wait for the task " + toString() + " result cannot be the Scheduler's single executor thread, as this would cause a deadlock."
+                    );
+                } else {
+                    if (Scheduler.SHOW_WARNINGS) {
+                        System.err.println("Warning: A Scheduler executor thread is being used to wait for a task result in " + toString() + ". This can cause deadlocks and slow down execution.");
+                    }
+
+                }
+            }
             try {
                 wait(timeout);
             } catch (Exception ex) {
@@ -174,6 +190,7 @@ public class Task implements Comparable<Task> {
         data.addProperty("delay", delay);
         data.addProperty("executions", executions);
         data.addProperty("done", done);
+        data.addProperty("execution_time", executionTime == -1 ? null : executionTime);
         return data;
     }
 
@@ -185,7 +202,29 @@ public class Task implements Comparable<Task> {
     public int compareTo(Task o) {
         long mt = getDelaySystemTime();
         long mo = o.getDelaySystemTime();
-        if (mt == mo || (mt < 0 && mo < 0)) {
+        if (mt < 0 && mo < 0) {
+            if (priority == o.priority) {
+                if (mt == mo) {
+                    return 0;
+                }
+                if (mt > mo) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+            long baseDiff = Math.abs(mt - mo);
+            int pDiff = Math.abs(priority - o.priority) * 100;
+            if (pDiff > baseDiff) {
+                return -1;
+            }
+            if (priority < o.priority) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+        if (mt == mo) {
             if (priority == o.priority) {
                 return 0;
             }
@@ -208,7 +247,15 @@ public class Task implements Comparable<Task> {
 
     @Override
     public String toString() {
-        return name + " " + priority;
+        return (name != null ? name : "#" + id) + ":{" + priority + "}";
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public long getExecutionTime() {
+        return executionTime;
     }
 
 }
