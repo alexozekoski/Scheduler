@@ -7,7 +7,7 @@ It does not create additional threads, ensuring predictable execution and low ov
 
 ## Features
 
-- Single-thread execution
+- Single-thread / Multi-thread execution
 - No additional threads created
 - Task scheduling with delay
 - Interval (repeating) tasks
@@ -34,7 +34,7 @@ This means:
 ```java
 public static void main(String[] args) {
 
-        Scheduler scheduler = new Scheduler("Example");
+        Scheduler scheduler = new Scheduler("Example"); 
         scheduler.setLogSize(5);
         scheduler.start();
 
@@ -57,6 +57,11 @@ public static void main(String[] args) {
         System.out.println(result);
     }
 ```
+### Multi-thread
+```java
+        Scheduler scheduler = new Scheduler("Example", 3); // Created with 3 threads executors
+```
+
 ### Shutdown
 ```java
 
