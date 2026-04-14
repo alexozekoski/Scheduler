@@ -20,8 +20,6 @@ public class Scheduler {
 
     private final LinkedList<Task> tasks = new LinkedList<>();
 
-    private volatile boolean run = true;
-
     private volatile long taskId = 1;
 
     private volatile boolean shutdownOnCompleteAllTasks = false;
@@ -40,6 +38,8 @@ public class Scheduler {
 
     public static boolean SHOW_WARNINGS = true;
 
+    private volatile boolean isShutdown = false;
+
     public Scheduler() {
         this(null);
     }
@@ -50,6 +50,10 @@ public class Scheduler {
 
     public Scheduler(String name, int executors) {
         this(name, executors, 0, false);
+    }
+
+    public Scheduler(String name, int executors, int logsSize) {
+        this(name, executors, logsSize, false);
     }
 
     public Scheduler(int executors) {
@@ -184,7 +188,7 @@ public class Scheduler {
         long delayMili = TimeUnit.MILLISECONDS.convert(delay, timeUnit);
         long delayInterval = TimeUnit.MILLISECONDS.convert(interval, timeUnit);
         synchronized (this) {
-            if (!this.run) {
+            if (this.isShutdown) {
                 throw new RuntimeException("Scheduler " + getName() + " has been shut down and cannot accept new tasks");
             }
             Task task = new Task(taskId++, name, run, delayMili, delayInterval, this, priority);
@@ -285,7 +289,20 @@ public class Scheduler {
     }
 
     public synchronized boolean cancelTask(Task task) {
+        if (task == null) {
+            return false;
+        }
         boolean t = tasks.remove(task);
+        if (!t) {
+            for (ExecutorTask ta : this.executors) {
+                if (ta != null) {
+                    if (ta.cancelTask(task)) {
+                        ta.setTask(getNextTask());
+                        return true;
+                    }
+                }
+            }
+        }
         tryShutdownWhenAllTasksDone();
         return t;
     }
@@ -311,12 +328,13 @@ public class Scheduler {
 
     public synchronized void completeTask(Task task) {
         if (task.isInterval()) {
-            sortTask(task);
-        } else {
-            tasks.remove(task);
-        }
+            if(!task.isCanceled()){
+               sortTask(task); 
+            }
+        } 
         addLogTask(task);
         ExecutorTask executorTask = getExecutor(task);
+        
         if (executorTask != null) {
             executorTask.setTask(getNextTask());
         }
@@ -370,26 +388,64 @@ public class Scheduler {
     }
 
     public synchronized void shutdown() {
-        run = false;
+        isShutdown = true;
         for (ExecutorTask ex : executors) {
             if (ex != null) {
                 ex.shutdown();
             }
         }
-
+        ExecutorTask current = getExecutorTaskByThread(Thread.currentThread());
         for (ExecutorTask exec : executors) {
             if (exec != null) {
-                try {
-                    exec.getThread().join();
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
+                if (current == null || !current.equals(exec)) {
+                    try {
+                        exec.getThread().join();
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }
     }
 
     public boolean isShutdown() {
-        return !run;
+        return isShutdown;
+    }
+
+    public synchronized int getNotIntervalTasksSize() {
+        int countTask = 0;
+        for (ExecutorTask ex : executors) {
+            if (ex != null) {
+                Task t = ex.getTask();
+                if (t != null && !t.isInterval()) {
+                    countTask++;
+                }
+            }
+        }
+        for (Task t : tasks) {
+            if (!t.isInterval()) {
+                countTask++;
+            }
+        }
+        return countTask;
+    }
+
+    public synchronized int getIntervalTasksSize() {
+        int countTask = 0;
+        for (ExecutorTask ex : executors) {
+            if (ex != null) {
+                Task t = ex.getTask();
+                if (t != null && t.isInterval()) {
+                    countTask++;
+                }
+            }
+        }
+        for (Task t : tasks) {
+            if (t.isInterval()) {
+                countTask++;
+            }
+        }
+        return countTask;
     }
 
     public synchronized int getTasksSize() {
@@ -416,7 +472,8 @@ public class Scheduler {
                 JsonObject edata = new JsonObject();
                 edata.addProperty("id", executor.getThread().getId());
                 edata.addProperty("name", executor.getThread().getName());
-                edata.addProperty("is_running", run);
+                edata.addProperty("is_running", started);
+                edata.addProperty("is_shutdown", isShutdown);
                 edata.addProperty("is_interrupted", executor.getThread().isInterrupted());
                 edata.addProperty("is_alive", executor.getThread().isAlive());
                 edata.addProperty("is_daemon", executor.getThread().isDaemon());
@@ -529,6 +586,9 @@ public class Scheduler {
     }
 
     protected ExecutorTask getExecutorTaskByThread(Thread thread) {
+        if (!started) {
+            return null;
+        }
         for (ExecutorTask ex : executors) {
             if (ex != null && ex.getThread().equals(thread)) {
                 return ex;

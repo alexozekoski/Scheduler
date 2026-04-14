@@ -28,6 +28,7 @@ public class Task implements Comparable<Task> {
     private volatile Exception error;
     private volatile int priority = 0;
     private volatile long executionTime = -1;
+    private volatile boolean canceled = false;
 
     public Task(long id, String name, Runnable runnable, long delay, long interval, Scheduler scheduler, int priority) {
         this.id = id;
@@ -86,6 +87,7 @@ public class Task implements Comparable<Task> {
     }
 
     public synchronized void cancel() {
+        this.canceled = true;
         this.scheduler.cancelTask(this);
         notifyAll();
     }
@@ -256,6 +258,10 @@ public class Task implements Comparable<Task> {
 
     public long getExecutionTime() {
         return executionTime;
+    }
+
+    public boolean isCanceled() {
+        return canceled;
     }
 
 }

@@ -59,7 +59,7 @@ public static void main(String[] args) {
 ```
 ### Multi-thread
 ```java
-        Scheduler scheduler = new Scheduler("Example", 3); // Created with 3 threads executors
+Scheduler scheduler = new Scheduler("Example", 3); // Created with 3 threads executors
 ```
 
 ### Shutdown
