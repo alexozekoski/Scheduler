@@ -81,6 +81,17 @@ public class ExecutorTask implements Runnable {
         }
     }
 
+    public synchronized boolean cancelTask(Task task) {
+        Task t = getTask();
+        if (t == null || task == null) {
+            return false;
+        }
+        if (!inExecution) {
+            setTask(null);
+        }
+        return t.equals(task);
+    }
+
     public synchronized void waitDelayTask() throws InterruptedException {
         if (this.task == null) {
             wait();
