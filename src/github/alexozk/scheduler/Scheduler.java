@@ -18,13 +18,15 @@ import java.util.concurrent.TimeUnit;
  */
 public class Scheduler {
 
+    public static boolean SHOW_WARNINGS = true;
+
     private final LinkedList<Task> tasks = new LinkedList<>();
 
     private volatile long taskId = 1;
 
     private volatile boolean shutdownOnCompleteAllTasks = false;
 
-    private volatile LinkedList<Task> tasksDone = new LinkedList();
+    private volatile LinkedList<Task> tasksCompleted = new LinkedList();
 
     private volatile int logSize = 0;
 
@@ -36,9 +38,9 @@ public class Scheduler {
 
     private volatile boolean started = false;
 
-    public static boolean SHOW_WARNINGS = true;
-
     private volatile boolean isShutdown = false;
+
+    private final List<TaskListener> listeners = new ArrayList<>();
 
     public Scheduler() {
         this(null);
@@ -196,6 +198,7 @@ public class Scheduler {
             if (!addExecutorTask(task)) {
                 sortTask(task);
             }
+            onTaskAdded(task);
             return task;
         }
     }
@@ -298,12 +301,16 @@ public class Scheduler {
                 if (ta != null) {
                     if (ta.cancelTask(task)) {
                         ta.setTask(getNextTask());
-                        return true;
+                        t = true;
+                        break;
                     }
                 }
             }
         }
-        tryShutdownWhenAllTasksDone();
+        if (t) {
+            onTaskCanceled(task);
+            tryShutdownWhenAllTasksCompleted();
+        }
         return t;
     }
 
@@ -322,23 +329,22 @@ public class Scheduler {
         }
         tasks.add(pos, task);
         Collections.sort(tasks);
-        // System.out.println(tasks);
         return pos;
     }
 
     public synchronized void completeTask(Task task) {
         if (task.isInterval()) {
-            if(!task.isCanceled()){
-               sortTask(task); 
+            if (!task.isCanceled()) {
+                sortTask(task);
             }
-        } 
+        }
         addLogTask(task);
         ExecutorTask executorTask = getExecutor(task);
-        
+        onTaskCompleted(task);
         if (executorTask != null) {
             executorTask.setTask(getNextTask());
         }
-        tryShutdownWhenAllTasksDone();
+        tryShutdownWhenAllTasksCompleted();
     }
 
     private synchronized ExecutorTask getExecutor(Task task) {
@@ -352,11 +358,11 @@ public class Scheduler {
     }
 
     public synchronized void addLogTask(Task task) {
-        if (tasksDone != null && logSize > 0 && task != null) {
-            tasksDone.add(task);
+        if (tasksCompleted != null && logSize > 0 && task != null) {
+            tasksCompleted.add(task);
         }
-        while (tasksDone.size() > logSize) {
-            tasksDone.removeFirst();
+        while (tasksCompleted.size() > logSize) {
+            tasksCompleted.removeFirst();
         }
     }
 
@@ -366,7 +372,7 @@ public class Scheduler {
         }
     }
 
-    public synchronized boolean tryShutdownWhenAllTasksDone() {
+    public synchronized boolean tryShutdownWhenAllTasksCompleted() {
         if (shutdownOnCompleteAllTasks && !hasTasks()) {
             shutdown();
             return true;
@@ -478,6 +484,8 @@ public class Scheduler {
                 edata.addProperty("is_alive", executor.getThread().isAlive());
                 edata.addProperty("is_daemon", executor.getThread().isDaemon());
                 edata.addProperty("priority", executor.getThread().getPriority());
+                Task t = executor.getTask();
+                edata.add("task", t != null ? t.toJson() : null);
                 StackTracerCode[] tracer = Debugger.getStackTracer(executor.getThread());
                 JsonArray st = null;
                 if (tracer != null) {
@@ -490,15 +498,13 @@ public class Scheduler {
             }
         }
         data.add("executors", executors);
-        // data.add("next_task", nextTask != null ? nextTask.toJson() : JsonNull.INSTANCE);
         data.add("tasks", ts);
-
         if (logSize > 0) {
             ts = new JsonArray(tasks.size());
-            for (Task t : tasksDone) {
+            for (Task t : tasksCompleted) {
                 ts.add(t.toJson());
             }
-            data.add("tasks_done", ts);
+            data.add("tasks_completed", ts);
         }
         return data;
     }
@@ -603,5 +609,41 @@ public class Scheduler {
 
     public boolean isCurrentThreadExecutor() {
         return isThreadExecutor(Thread.currentThread());
+    }
+
+    public synchronized void addTaskListener(TaskListener listener) {
+        listeners.add(listener);
+    }
+
+    public synchronized boolean removeTaskListener(TaskListener listener) {
+        return listeners.remove(listener);
+    }
+
+    public synchronized TaskListener[] getTaskListenersCopy() {
+        return listeners.toArray(TaskListener[]::new);
+    }
+
+    protected synchronized void onTaskStarted(Task task) {
+        listeners.forEach((listener) -> {
+            listener.onTaskStarted(task);
+        });
+    }
+
+    protected synchronized void onTaskCompleted(Task task) {
+        listeners.forEach((listener) -> {
+            listener.onTaskCompleted(task);
+        });
+    }
+
+    protected synchronized void onTaskCanceled(Task task) {
+        listeners.forEach((listener) -> {
+            listener.onTaskCanceled(task);
+        });
+    }
+
+    protected synchronized void onTaskAdded(Task task) {
+        listeners.forEach((listener) -> {
+            listener.onTaskAdded(task);
+        });
     }
 }

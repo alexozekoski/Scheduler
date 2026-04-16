@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class Task implements Comparable<Task> {
 
     private final Runnable runnable;
-    private volatile boolean done = false;
+    private volatile boolean completed = false;
     private final Scheduler scheduler;
     private volatile boolean inExcution = false;
     private volatile long delay = 0;
@@ -40,9 +40,6 @@ public class Task implements Comparable<Task> {
         this.priority = priority;
     }
 
-//    public void setInExcution(boolean inExcution) {;
-//        this.inExcution = inExcution;
-//    }
     public void execute() {
         synchronized (this) {
             while (inExcution) {
@@ -55,6 +52,7 @@ public class Task implements Comparable<Task> {
             inExcution = true;
             error = null;
         }
+        scheduler.onTaskStarted(this);
         long startRun = System.currentTimeMillis();
         try {
             runnable.run();
@@ -66,7 +64,7 @@ public class Task implements Comparable<Task> {
         synchronized (this) {
             this.executionTime = startRun - endRun;
             if (!isInterval()) {
-                done = true;
+                completed = true;
             } else {
                 start = startRun;
             }
@@ -93,7 +91,7 @@ public class Task implements Comparable<Task> {
     }
 
     public synchronized void get(long timeout) {
-        if (!done) {
+        if (!completed) {
             if (scheduler.isCurrentThreadExecutor()) {
                 if (scheduler.isSingleThread()) {
                     throw new RejectedExecutionException(
@@ -122,8 +120,8 @@ public class Task implements Comparable<Task> {
         get(0);
     }
 
-    public boolean isDone() {
-        return done;
+    public boolean isCompleted() {
+        return completed;
     }
 
     public boolean isInExcution() {
@@ -191,7 +189,7 @@ public class Task implements Comparable<Task> {
         data.add("start", Util.toJson(new Date(start)));
         data.addProperty("delay", delay);
         data.addProperty("executions", executions);
-        data.addProperty("done", done);
+        data.addProperty("completed", completed);
         data.addProperty("execution_time", executionTime == -1 ? null : executionTime);
         return data;
     }
