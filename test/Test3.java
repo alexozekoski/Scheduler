@@ -15,11 +15,11 @@ import github.alexozk.scheduler.TaskListenerAdapter;
 public class Test3 {
 
     public static void main(String[] args) {
-        Scheduler s = new Scheduler();
-        s.addTaskListener(new TaskListener() {
+        Scheduler scheduler = new Scheduler();
+        scheduler.addTaskListener(new TaskListener() {
             @Override
             public void onTaskStarted(Task task) {
-                System.out.println("START " + task);
+                System.out.println("STARTED " + task);
             }
 
             @Override
@@ -34,22 +34,22 @@ public class Test3 {
 
             @Override
             public void onTaskAdded(Task task) {
-                System.out.println("ADD " + task);
+                System.out.println("ADDED " + task);
             }
         });
-        s.addTaskListener(new TaskListenerAdapter() {
+        scheduler.addTaskListener(new TaskListenerAdapter() {
             @Override
             public void onTaskAdded(Task task) {
-                System.out.println("ADD 2" + task);
+                System.out.println("ADDED 2" + task);
             }
         });
-        s.start();
-        s.scheduleAtInterval("I1", () -> {
+        scheduler.start();
+        scheduler.scheduleAtInterval("I1", () -> {
         }, 2000);
-        Task t = s.schedule("c1", () -> {
+        Task t = scheduler.schedule("c1", () -> {
             System.out.println("can");
         }, 5000);
-        s.schedule("a1", () -> {
+        scheduler.schedule("a1", () -> {
             t.cancel();
         }, 3000);
     }
