@@ -612,10 +612,16 @@ public class Scheduler {
     }
 
     public synchronized void addTaskListener(TaskListener listener) {
+        if (listener == null) {
+            return;
+        }
         listeners.add(listener);
     }
 
     public synchronized boolean removeTaskListener(TaskListener listener) {
+        if (listener == null) {
+            return false;
+        }
         return listeners.remove(listener);
     }
 
@@ -623,27 +629,50 @@ public class Scheduler {
         return listeners.toArray(TaskListener[]::new);
     }
 
-    protected synchronized void onTaskStarted(Task task) {
-        listeners.forEach((listener) -> {
+    private synchronized TaskListener[] getTaskListenersCopyOrNull() {
+        if (listeners.isEmpty()) {
+            return null;
+        }
+        return listeners.toArray(TaskListener[]::new);
+    }
+
+    protected void onTaskStarted(Task task) {
+        TaskListener[] listeners = getTaskListenersCopyOrNull();
+        if (listeners == null) {
+            return;
+        }
+        for (TaskListener listener : listeners) {
             listener.onTaskStarted(task);
-        });
+        }
     }
 
-    protected synchronized void onTaskCompleted(Task task) {
-        listeners.forEach((listener) -> {
+    protected void onTaskCompleted(Task task) {
+        TaskListener[] listeners = getTaskListenersCopyOrNull();
+        if (listeners == null) {
+            return;
+        }
+        for (TaskListener listener : listeners) {
             listener.onTaskCompleted(task);
-        });
+        }
     }
 
-    protected synchronized void onTaskCanceled(Task task) {
-        listeners.forEach((listener) -> {
+    protected void onTaskCanceled(Task task) {
+        TaskListener[] listeners = getTaskListenersCopyOrNull();
+        if (listeners == null) {
+            return;
+        }
+        for (TaskListener listener : listeners) {
             listener.onTaskCanceled(task);
-        });
+        }
     }
 
-    protected synchronized void onTaskAdded(Task task) {
-        listeners.forEach((listener) -> {
+    protected void onTaskAdded(Task task) {
+        TaskListener[] listeners = getTaskListenersCopyOrNull();
+        if (listeners == null) {
+            return;
+        }
+        for (TaskListener listener : listeners) {
             listener.onTaskAdded(task);
-        });
+        }
     }
 }
