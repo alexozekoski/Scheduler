@@ -135,6 +135,40 @@ task.cancel();
 task.toJson();
 ```
 
+### Task Listeners
+```java
+Scheduler scheduler = new Scheduler();
+
+scheduler.addTaskListener(new TaskListener() {
+    @Override
+    public void onTaskStarted(Task task) {
+        System.out.println("STARTED " + task);
+    }
+
+    @Override
+    public void onTaskCompleted(Task task) {
+        System.out.println("COMPLETED " + task);
+    }
+
+    @Override
+    public void onTaskCanceled(Task task) {
+        System.out.println("CANCELED " + task);
+    }
+
+    @Override
+    public void onTaskAdded(Task task) {
+        System.out.println("ADDED " + task);
+    }
+});
+
+scheduler.addTaskListener(new TaskListenerAdapter() {
+    @Override
+    public void onTaskAdded(Task task) {
+        System.out.println("ADDED 2" + task);
+    }
+});
+```
+
 ## Service
 
 ### Creating a Service
