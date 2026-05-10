@@ -16,21 +16,40 @@ import java.util.concurrent.TimeUnit;
 public class Task implements Comparable<Task> {
 
     private final Runnable runnable;
+
     private volatile boolean completed = false;
+
     private final Scheduler scheduler;
+
     private volatile boolean inExcution = false;
+
     private volatile long delay = 0;
+
     private volatile long interval = 0;
+
     private volatile long start = System.currentTimeMillis();
+
     private volatile long executions = 0;
+
     private volatile String name;
+
     private final long id;
+
     private volatile Exception error;
+
     private volatile int priority = 0;
+
     private volatile long executionTime = -1;
+
     private volatile boolean canceled = false;
 
-    public Task(long id, String name, Runnable runnable, long delay, long interval, Scheduler scheduler, int priority) {
+    private volatile boolean scheduled = false;
+
+    private TaskException runCatch = null;
+
+    private Runnable runFinally = null;
+
+    protected Task(long id, String name, Runnable runnable, long delay, long interval, Scheduler scheduler, int priority) {
         this.id = id;
         this.name = name;
         this.runnable = runnable;
@@ -60,37 +79,92 @@ public class Task implements Comparable<Task> {
             error = ex;
         }
         long endRun = System.currentTimeMillis();
-
         synchronized (this) {
             this.executionTime = startRun - endRun;
-            if (!isInterval()) {
-                completed = true;
-            } else {
+            executions++;
+            if(isInterval()){
                 start = startRun;
             }
-
-            executions++;
-            inExcution = false;
-            notifyAll();
         }
         try {
             scheduler.completeTask(this);
-
         } catch (Exception ex) {
             error = ex;
         }
+
+        synchronized (this) { 
+            inExcution = false;
+            if (!isInterval()) {
+                scheduled = false;
+                completed = true;
+            } 
+            notifyAll();
+        }
+
         if (error != null) {
+            executeCatch();
             scheduler.onError(this, error);
         }
+        executeFinally();
+
     }
 
-    public synchronized void cancel() {
+    public synchronized Task cancel() {
         this.canceled = true;
         this.scheduler.cancelTask(this);
         notifyAll();
+        return this;
     }
 
-    public synchronized void get(long timeout) {
+    public synchronized Task onFinally(Runnable run) {
+        this.runFinally = run;
+        if (this.isCompleted()) {
+            executeFinally();
+        }
+        return this;
+    }
+
+    public synchronized Task onCatch(TaskException run) {
+        this.runCatch = run;
+        if (this.isCompleted()) {
+            executeCatch();
+        }
+        return this;
+    }
+
+    private synchronized void executeCatch() {
+        try {
+            if (runCatch != null) {
+                runCatch.run(error);
+            }else{
+                error.printStackTrace();
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private synchronized void executeFinally() {
+        try {
+            if (runFinally != null) {
+                runFinally.run();
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public synchronized void schedule() {
+        if (scheduled) {
+            throw new IllegalStateException("Task " + toString() + " already scheduled");
+        }
+        canceled = false;
+        start = System.currentTimeMillis();
+        scheduled = true;
+        this.scheduler.addTask(this);
+    }
+
+    public synchronized void get(long timeout) throws InterruptedException {
         if (!completed) {
             if (scheduler.isCurrentThreadExecutor()) {
                 if (scheduler.isSingleThread()) {
@@ -104,20 +178,26 @@ public class Task implements Comparable<Task> {
 
                 }
             }
-            try {
-                wait(timeout);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+
+            wait(timeout);
         }
     }
 
-    public void get(long timeout, TimeUnit timeUnit) {
+    public void get(long timeout, TimeUnit timeUnit) throws InterruptedException {
         get(TimeUnit.MILLISECONDS.convert(timeout, timeUnit));
     }
 
-    public void get() {
+    public void get() throws InterruptedException {
         get(0);
+    }
+
+    public Task getSkippingInterrupted() {
+        try {
+            get(0);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+        return this;
     }
 
     public boolean isCompleted() {
@@ -192,6 +272,10 @@ public class Task implements Comparable<Task> {
         data.addProperty("completed", completed);
         data.addProperty("execution_time", executionTime == -1 ? null : executionTime);
         return data;
+    }
+
+    protected void setError(Exception ex) {
+        this.error = ex;
     }
 
     public Exception getError() {

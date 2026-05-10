@@ -77,8 +77,13 @@ public class ExecutorTask implements Runnable {
             } finally {
                 this.inExecution = false;
             }
+            onCompleteExecution();
 
         }
+    }
+
+    public void onCompleteExecution() {
+
     }
 
     public synchronized boolean cancelTask(Task task) {

@@ -10,6 +10,7 @@ import github.alexozk.scheduler.Task;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -18,18 +19,30 @@ import java.util.List;
  */
 public abstract class Service<T> extends Scheduler {
 
-    protected final Task mainTask;
+    protected volatile Task mainTask;
 
     private final List<ServiceListener> listeners = Collections.synchronizedList(new ArrayList(10));
 
     public Service(String name, long interval) {
-        super(name, false);
-        this.execute(() -> {
-            startup();
-        });
-        this.mainTask = scheduleAtInterval(() -> {
+        this(name, interval, false);
+    }
+
+    public Service(String name, long interval, boolean virtualThread) {
+        super(name, virtualThread);
+        this.mainTask = createUnscheduledTask("Main loop", () -> {
             executeAction();
-        }, interval, interval);
+        }, interval, interval).onCatch((Exception ex) -> {
+            ex.printStackTrace();
+        });
+
+        this.schedule("Startup", () -> {
+            startup();
+        }, 2000).onCatch((Exception ex) -> {
+            ex.printStackTrace();
+        }).onFinally(() -> {
+            this.mainTask.schedule();
+        });
+
     }
 
     private void executeAction() {
@@ -56,11 +69,11 @@ public abstract class Service<T> extends Scheduler {
         return mainTask.getInterval();
     }
 
-    public void forceExecute() {
+    public void forceExecute() throws InterruptedException {
         forceExecute(0);
     }
 
-    public void forceExecute(long timeout) {
+    public void forceExecute(long timeout) throws InterruptedException {
         execute("Force execute", () -> {
             mainTask.execute();
         }).get(timeout);

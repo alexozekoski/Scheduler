@@ -42,10 +42,14 @@ public class Test1 {
 //            waitTime(3000);
 //        }, 0, 3000, 1);
         s.schedule("t2", () -> {
-            String t = s.execute("CALL ", () -> {
-                System.out.println("call " + Thread.currentThread().getName());
-                return new Date().toString();
-            });
+            try {
+                String t = s.execute("CALL ", () -> {
+                    System.out.println("call " + Thread.currentThread().getName());
+                    return new Date().toString();
+                });
+            } catch (Exception ex) {
+                Logger.getLogger(Test1.class.getName()).log(Level.SEVERE, null, ex);
+            }
             System.out.println("eee " + Thread.currentThread().getName());
         }, 5000);
         s.start();

@@ -115,6 +115,21 @@ scheduler.scheduleAtInterval(() -> {
 }, 1, 2, TimeUnit.SECONDS);
 ```
 
+### Create Unscheduled Task
+
+```java
+Task task = scheduler.createUnscheduledTask(() -> {
+    System.out.println("Run with delay");
+}, delay);
+
+// With initial delay + interval:
+Task task = scheduler.createUnscheduledTask(() -> {
+    System.out.println("Delayed + repeating");
+}, 2000, 1000);
+
+// Schedule task:
+task.schedule();
+```
 
 ## Tasks
 ```java
@@ -133,6 +148,16 @@ task.cancel();
 
 // Debug (JSON)
 task.toJson();
+
+// Async finally
+task.onFinally(() -> {
+    task.schedule();
+});
+
+// Async catch error
+task.onCatch((Exception ex) -> {
+    ex.printStackTrace();
+});
 ```
 
 ### Task Listeners
