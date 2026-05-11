@@ -66,19 +66,25 @@ public class ExecutorTask implements Runnable {
             try {
                 Task t;
                 synchronized (this) {
-                    inExecution = true;
                     t = getTask();
+                    if (t != null && t.getDelaySystemTime() <= 0) {
+                        inExecution = true;
+                    }
                 }
-                if (t != null && t.getDelaySystemTime() <= 0) {
+                if (inExecution) {
                     t.execute();
+                } else {
+                    continue;
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
             } finally {
-                this.inExecution = false;
+                synchronized (this) {
+                    this.task = null;
+                    this.inExecution = false;
+                }
             }
             onCompleteExecution();
-
         }
     }
 
@@ -113,7 +119,6 @@ public class ExecutorTask implements Runnable {
     }
 
     public synchronized void shutdown() {
-        this.task = null;
         this.runnig = false;
         notifyAll();
     }

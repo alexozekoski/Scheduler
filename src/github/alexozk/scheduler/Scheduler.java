@@ -120,6 +120,7 @@ public class Scheduler {
                     @Override
                     public void onCompleteExecution() {
                         getNextTask(this);
+                        tryShutdownWhenAllTasksCompleted();
                     }
                 };
                 if (virtualThread) {
@@ -227,7 +228,7 @@ public class Scheduler {
         }
     }
 
-    public synchronized void addTask(Task task) {
+    protected synchronized void addTask(Task task) {
         if (!addToExecutorTask(task)) {
             sortTask(task);
         }
@@ -416,8 +417,6 @@ public class Scheduler {
         addLogTask(task);
 
         onTaskCompleted(task);
-
-        tryShutdownWhenAllTasksCompleted();
     }
 
 //    private synchronized ExecutorTask getExecutor(Task task) {
@@ -472,10 +471,12 @@ public class Scheduler {
                 }
             }
             ExecutorTask current = getExecutorTaskByThread(Thread.currentThread());
+
             for (ExecutorTask exec : executors) {
                 if (exec != null) {
                     if (current == null || !current.equals(exec)) {
                         try {
+                            exec.shutdown();
                             exec.getThread().join();
                         } catch (InterruptedException ex) {
                             ex.printStackTrace();
