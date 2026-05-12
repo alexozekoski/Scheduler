@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Task implements Comparable<Task> {
 
-    private final Runnable runnable;
+    private final TaskRunnable runnable;
 
     private volatile boolean completed = false;
 
@@ -49,7 +49,7 @@ public class Task implements Comparable<Task> {
 
     private Runnable runFinally = null;
 
-    protected Task(long id, String name, Runnable runnable, long delay, long interval, Scheduler scheduler, int priority) {
+    protected Task(long id, String name, TaskRunnable runnable, long delay, long interval, Scheduler scheduler, int priority) {
         this.id = id;
         this.name = name;
         this.runnable = runnable;
@@ -74,7 +74,7 @@ public class Task implements Comparable<Task> {
         scheduler.onTaskStarted(this);
         long startRun = System.currentTimeMillis();
         try {
-            runnable.run();
+            runnable.run(this);
         } catch (Exception ex) {
             error = ex;
         }

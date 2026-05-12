@@ -8,7 +8,7 @@ package github.alexozk.scheduler;
  *
  * @author alexo
  */
-public class ExecutorTask implements Runnable {
+public class Executor implements Runnable {
 
     private volatile Thread thread;
 
@@ -18,7 +18,7 @@ public class ExecutorTask implements Runnable {
 
     private volatile boolean inExecution = false;
 
-    protected ExecutorTask() {
+    protected Executor() {
 
     }
 
