@@ -38,7 +38,7 @@ public class Scheduler {
 
     private String name;
 
-    private boolean virtualThread = false;
+    private final boolean virtualThread;
 
     private volatile boolean started = false;
 
@@ -46,7 +46,7 @@ public class Scheduler {
 
     private final List<TaskListener> listeners = new ArrayList<>();
 
-    private Runnable onShutdown = null;
+    private volatile Runnable onShutdown = null;
 
     public static Scheduler getSchedulerByCurrentThread() {
         return getSchedulerByThread(Thread.currentThread());
@@ -595,10 +595,11 @@ public class Scheduler {
         }
     }
 
-    private synchronized void executeOnShutdown() {
+    private void executeOnShutdown() {
+        Runnable runnable = this.onShutdown;
         try {
-            if (onShutdown != null) {
-                onShutdown.run();
+            if (runnable != null) {
+                runnable.run();
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -633,8 +634,8 @@ public class Scheduler {
                     }
                 }
             }
-            executeOnShutdown();
         }
+        executeOnShutdown();
 
     }
 
@@ -780,10 +781,6 @@ public class Scheduler {
         return virtualThread;
     }
 
-    public void setVirtualThread(boolean virtualThread) {
-        this.virtualThread = virtualThread;
-    }
-
     public boolean isSingleThread() {
         return this.executors.length == 1;
     }
@@ -802,7 +799,6 @@ public class Scheduler {
             if (et != null) {
                 t[i] = et.getThread();
             }
-
         }
         return t;
     }
