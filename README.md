@@ -6,7 +6,7 @@ A lightweight single-threaded scheduler for Java.
 
 Browse the static documentation page in the repository:
 
-- [Open the docs page](docs/index.html)
+- [Open the docs page](./docs/index.html)
 
 This project provides a simple scheduler that runs tasks sequentially using a single thread.  
 It does not create additional threads, ensuring predictable execution and low overhead.
