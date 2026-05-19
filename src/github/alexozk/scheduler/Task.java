@@ -80,9 +80,9 @@ public class Task implements Comparable<Task> {
         }
         long endRun = System.currentTimeMillis();
         synchronized (this) {
-            this.executionTime = startRun - endRun;
+            this.executionTime = endRun - startRun;
             executions++;
-            if(isInterval()){
+            if (isInterval()) {
                 start = startRun;
             }
         }
@@ -92,12 +92,12 @@ public class Task implements Comparable<Task> {
             error = ex;
         }
 
-        synchronized (this) { 
+        synchronized (this) {
             inExcution = false;
             if (!isInterval()) {
                 scheduled = false;
                 completed = true;
-            } 
+            }
             notifyAll();
         }
 
@@ -109,7 +109,11 @@ public class Task implements Comparable<Task> {
 
     }
 
+
     public synchronized Task cancel() {
+        if(isCompleted()){
+            return this;
+        }
         this.canceled = true;
         this.scheduler.cancelTask(this);
         notifyAll();
@@ -136,7 +140,7 @@ public class Task implements Comparable<Task> {
         try {
             if (runCatch != null) {
                 runCatch.run(error);
-            }else{
+            } else {
                 error.printStackTrace();
             }
         } catch (Exception ex) {

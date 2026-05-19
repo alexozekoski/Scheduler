@@ -118,7 +118,7 @@ public class Scheduler {
             }
             for (int i = 0; i < executors.length; i++) {
                 Thread executor;
-                Executor executorTask = new Executor() {
+                Executor executorTask = new Executor(i) {
                     @Override
                     public void onCompleteExecution() {
                         getNextTask(this);
@@ -270,6 +270,7 @@ public class Scheduler {
 
     protected synchronized void addTask(Task task) {
         if (!addToExecutorTask(task)) {
+
             sortTask(task);
         }
         onTaskAdded(task);
@@ -713,15 +714,19 @@ public class Scheduler {
 
     public synchronized JsonObject toJson() {
         JsonObject data = new JsonObject();
+        data.addProperty("name", name);
+        data.addProperty("is_vritual_thread", isVirtualThread());
+        data.addProperty("is_shut_down_on_complete_all_tasks", isShutdownOnCompleteAllTasks());
+
         JsonArray ts = new JsonArray(tasks.size());
         for (Task t : tasks) {
             ts.add(t.toJson());
         }
         JsonArray executors = null;
         if (this.executors != null) {
+
             executors = new JsonArray(this.executors.length);
-            for (int i = 0; i < executors.size(); i++) {
-                Executor executor = this.executors[i];
+            for (Executor executor : this.executors) {
                 JsonObject edata = new JsonObject();
                 edata.addProperty("id", executor.getThread().getId());
                 edata.addProperty("name", executor.getThread().getName());
@@ -742,8 +747,10 @@ public class Scheduler {
                     }
                 }
                 edata.add("stack_tracer", st);
+                executors.add(edata);
             }
         }
+
         data.add("executors", executors);
         data.add("tasks", ts);
         if (logSize > 0) {

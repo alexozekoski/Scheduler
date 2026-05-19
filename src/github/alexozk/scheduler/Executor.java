@@ -8,7 +8,7 @@ package github.alexozk.scheduler;
  *
  * @author alexo
  */
-public class Executor implements Runnable {
+public abstract class Executor implements Runnable {
 
     private volatile Thread thread;
 
@@ -18,7 +18,10 @@ public class Executor implements Runnable {
 
     private volatile boolean inExecution = false;
 
-    protected Executor() {
+    private final int position;
+
+    protected Executor(int position) {
+        this.position = position;
 
     }
 
@@ -36,13 +39,15 @@ public class Executor implements Runnable {
 
     public synchronized void setTask(Task task) {
         this.task = task;
+        notifyAll();
     }
 
     public synchronized boolean setTaskIfCan(Task task) {
-        if (this.inExecution) {
+
+        if (this.inExecution || task == null) {
             return false;
         }
-        if (this.task == null || task == null) {
+        if (this.task == null) {
             this.task = task;
             notifyAll();
             return true;
@@ -52,26 +57,25 @@ public class Executor implements Runnable {
             notifyAll();
             return true;
         }
-
         return false;
     }
 
     @Override
     public void run() {
         while (runnig) {
+            Task t = null;
             try {
-                waitDelayTask();
+                synchronized (this) {
+                    do {
+                        t = getTask();
+                        waitDelayTask();
+                    } while (t == null || t.getDelaySystemTime() > 0);
+                    inExecution = true;
+                }
             } catch (InterruptedException ex) {
             }
             try {
-                Task t;
-                synchronized (this) {
-                    t = getTask();
-                    if (t != null && t.getDelaySystemTime() <= 0) {
-                        inExecution = true;
-                    }
-                }
-                if (inExecution) {
+                if (t != null) {
                     t.execute();
                 } else {
                     continue;
@@ -88,9 +92,7 @@ public class Executor implements Runnable {
         }
     }
 
-    public void onCompleteExecution() {
-
-    }
+    public abstract void onCompleteExecution();
 
     public synchronized boolean cancelTask(Task task) {
         Task t = getTask();
