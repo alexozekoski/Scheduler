@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Scheduler is a lightweight Java task scheduling library with delays, intervals, priorities, listeners, and service abstractions." />
   <title>Scheduler | Lightweight Java Task Scheduler</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -29,44 +30,33 @@
 
   <main>
     <section class="wrap hero" id="overview">
-      <div>
-        <div class="eyebrow"><span class="eyebrow-dot"></span> Lightweight, deterministic, and easy to embed</div>
-        <h1>Schedule Java tasks with clarity and control.</h1>
-        <p class="subtitle">
-          Scheduler is a compact Java library for running tasks immediately, after a delay, or on a repeating interval.
-          It supports task priorities, listeners, logging, and a service abstraction for recurring background workflows.
-        </p>
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> Java task scheduling library</div>
+        <h1>Scheduler for Java</h1>
+        <p class="subtitle">A small Java scheduler for immediate execution, delayed jobs, repeating tasks, listeners, logging, and service-style workers.</p>
         <div class="actions">
           <a class="btn btn-primary" href="#usage">View examples</a>
           <a class="btn btn-secondary" href="#api">Browse API</a>
         </div>
-        <div class="pill">Built for Java projects that need predictable task execution</div>
+        <div class="pill">Single or multi-executor scheduling with optional virtual threads</div>
       </div>
-
-      <div class="hero-panel" aria-label="Project highlights">
-        <div class="panel-grid">
-          <div class="metric">
-            <strong>3</strong>
-            <span>Main execution styles: immediate, delayed, and interval-based</span>
-          </div>
-          <div class="metric">
-            <strong>21+</strong>
-            <span>Optional virtual thread support on Java 21+</span>
-          </div>
-          <div class="metric">
-            <strong>Priority</strong>
-            <span>Tasks are ordered by timing and priority when ready</span>
-          </div>
-          <div class="metric">
-            <strong>JSON</strong>
-            <span>Debug-friendly `toJson()` output for tasks and scheduler state</span>
-          </div>
+      <aside class="hero-side" aria-label="Quick overview">
+        <div class="mini-card">
+          <h3>What it does</h3>
+          <p>Runs tasks immediately, after a delay, or on an interval, while keeping execution predictable and easy to inspect.</p>
         </div>
         <div class="mini-card">
-          <h3>What it is</h3>
-          <p>A reusable scheduler and service foundation for Java applications, utilities, bots, background jobs, and tooling.</p>
+          <h3>Quick links</h3>
+          <ul class="quick-links">
+            <li><a href="#usage">View examples</a></li>
+            <li><a href="#api">Browse API</a></li>
+          </ul>
         </div>
-      </div>
+        <div class="mini-card">
+          <h3>Highlights</h3>
+          <p>Priorities, listeners, JSON debugging, optional virtual threads, and a `Service` abstraction for recurring jobs.</p>
+        </div>
+      </aside>
     </section>
 
     <section class="wrap section" id="getting-started">
@@ -102,104 +92,261 @@
       <div class="section-head">
         <div>
           <h2 class="section-title">Usage examples</h2>
-          <p class="section-copy">
-            The examples below cover the most common patterns in the codebase: immediate execution, delayed execution, intervals, callable results, cancellation, and service usage.
-          </p>
+          <p class="section-copy">All examples from the README, formatted as clean Java code blocks.</p>
         </div>
       </div>
 
-      <div class="split">
-        <div class="codebox">
-          <div class="codebar">
-            <div class="codebar-left" aria-hidden="true">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="code-title">Scheduler setup</span>
+      <div class="examples-grid">
+        <article class="example-card">
+          <h3>Create Scheduler</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Create Scheduler</span>
+              </div>
+              <div class="code-lang">Java</div>
             </div>
-            <div class="code-lang">Java</div>
-          </div>
-          <pre><code><span class="code-line"><span class="tok-type">Scheduler</span> scheduler = <span class="tok-kw">new</span> <span class="tok-type">Scheduler</span>(<span class="tok-str">"Example"</span>);</span>
-<span class="code-line">scheduler.<span class="tok-fn">setLogSize</span>(<span class="tok-num">5</span>);</span>
-<span class="code-line">scheduler.<span class="tok-fn">start</span>();</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Immediate task</span></span>
-<span class="code-line">scheduler.<span class="tok-fn">execute</span>(() -&gt; {</span>
-<span class="code-line">    <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Immediate task"</span>);</span>
-<span class="code-line">});</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Delayed task</span></span>
-<span class="code-line">scheduler.<span class="tok-fn">schedule</span>(() -&gt; {</span>
-<span class="code-line">    <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Delayed task"</span>);</span>
-<span class="code-line">}, <span class="tok-num">2_000</span>);</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Repeating task</span></span>
-<span class="code-line">scheduler.<span class="tok-fn">scheduleAtInterval</span>(() -&gt; {</span>
-<span class="code-line">    <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Repeating task"</span>);</span>
-<span class="code-line">}, <span class="tok-num">1_000</span>);</span></code></pre>
-        </div>
+            <pre><code>public static void main(String[] args) {
 
-        <div class="codebox">
-          <div class="codebar">
-            <div class="codebar-left" aria-hidden="true">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="code-title">Callable + hooks</span>
+        Scheduler scheduler = new Scheduler("Example"); 
+        scheduler.setLogSize(5);
+        scheduler.start();
+
+        scheduler.execute(() -&gt; {
+            System.out.println("Immediate");
+        });
+
+        scheduler.schedule(() -&gt; {
+            System.out.println("Delayed");
+        }, 2000);
+
+        scheduler.scheduleAtInterval(() -&gt; {
+            System.out.println("Repeating");
+        }, 1000);
+
+        String result = scheduler.schedule(() -&gt; {
+            return "Callable result";
+        }, 1000);
+
+        System.out.println(result);
+    }</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Multi-thread</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Multi-thread</span>
+              </div>
+              <div class="code-lang">Java</div>
             </div>
-            <div class="code-lang">Java</div>
+            <pre><code>Scheduler scheduler = new Scheduler("Example", 3); // Created with 3 threads executors</code></pre>
           </div>
-          <pre><code><span class="code-line"><span class="tok-com">// Callable result</span></span>
-<span class="code-line"><span class="tok-type">String</span> result = scheduler.<span class="tok-fn">schedule</span>(() -&gt; {</span>
-<span class="code-line">    <span class="tok-kw">return</span> <span class="tok-str">"Task completed"</span>;</span>
-<span class="code-line">}, <span class="tok-num">500</span>);</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Named task with lifecycle hooks</span></span>
-<span class="code-line"><span class="tok-type">Task</span> task = scheduler.<span class="tok-fn">execute</span>(<span class="tok-str">"my-task"</span>, () -&gt; {</span>
-<span class="code-line">    <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Named task"</span>);</span>
-<span class="code-line">});</span>
-<span class="code-line"></span>
-<span class="code-line">task.<span class="tok-fn">onFinally</span>(() -&gt; <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Finished"</span>));</span>
-<span class="code-line">task.<span class="tok-fn">onCatch</span>((<span class="tok-type">Exception</span> ex) -&gt; ex.<span class="tok-fn">printStackTrace</span>());</span>
-<span class="code-line">task.<span class="tok-fn">get</span>();</span></code></pre>
-        </div>
-      </div>
+        </article>
 
-      <div style="height:18px"></div>
-
-      <div class="split">
-        <div class="codebox">
-          <div class="codebar">
-            <div class="codebar-left" aria-hidden="true">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="code-title">Deferred task</span>
+        <article class="example-card">
+          <h3>Shutdown</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Shutdown</span>
+              </div>
+              <div class="code-lang">Java</div>
             </div>
-            <div class="code-lang">Java</div>
+            <pre><code>scheduler.shutdown();</code></pre>
           </div>
-          <pre><code><span class="code-line"><span class="tok-com">// Unscheduled task creation</span></span>
-<span class="code-line"><span class="tok-type">Task</span> task = scheduler.<span class="tok-fn">createUnscheduledTask</span>(<span class="tok-str">"deferred-job"</span>, () -&gt; {</span>
-<span class="code-line">    <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Ready when you are"</span>);</span>
-<span class="code-line">}, <span class="tok-num">3_000</span>, <span class="tok-num">1_000</span>);</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Later, explicitly queue it</span></span>
-<span class="code-line">task.<span class="tok-fn">schedule</span>();</span></code></pre>
-        </div>
+        </article>
 
-        <div class="codebox">
-          <div class="codebar">
-            <div class="codebar-left" aria-hidden="true">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="code-title">Listeners + shutdown</span>
+        <article class="example-card">
+          <h3>Auto Shutdown</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Auto shutdown</span>
+              </div>
+              <div class="code-lang">Java</div>
             </div>
-            <div class="code-lang">Java</div>
+            <pre><code>scheduler.setShutdownOnCompleteAllTasks(true);</code></pre>
           </div>
-          <pre><code><span class="code-line"><span class="tok-com">// Shutdown once all queued tasks are done</span></span>
-<span class="code-line">scheduler.<span class="tok-fn">setShutdownOnCompleteAllTasks</span>(<span class="tok-kw">true</span>);</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Listen to task lifecycle events</span></span>
-<span class="code-line">scheduler.<span class="tok-fn">addTaskListener</span>(<span class="tok-kw">new</span> <span class="tok-type">TaskListener</span>() {</span>
-<span class="code-line">    <span class="tok-ann">@Override</span> <span class="tok-kw">public</span> <span class="tok-kw">void</span> <span class="tok-fn">onTaskStarted</span>(<span class="tok-type">Task</span> task) {}</span>
-<span class="code-line">    <span class="tok-ann">@Override</span> <span class="tok-kw">public</span> <span class="tok-kw">void</span> <span class="tok-fn">onTaskCompleted</span>(<span class="tok-type">Task</span> task) {}</span>
-<span class="code-line">    <span class="tok-ann">@Override</span> <span class="tok-kw">public</span> <span class="tok-kw">void</span> <span class="tok-fn">onTaskCanceled</span>(<span class="tok-type">Task</span> task) {}</span>
-<span class="code-line">    <span class="tok-ann">@Override</span> <span class="tok-kw">public</span> <span class="tok-kw">void</span> <span class="tok-fn">onTaskAdded</span>(<span class="tok-type">Task</span> task) {}</span>
-<span class="code-line">});</span></code></pre>
-        </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Virtual Thread (Java 21+)</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Virtual Thread</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>Scheduler scheduler = new Scheduler(true);
+scheduler.start();</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Execute Immediately</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Execute Immediately</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>scheduler.execute(() -&gt; {
+    System.out.println("Run immediately");
+});
+
+//With name:
+scheduler.execute("my-task", () -&gt; {
+    System.out.println("Named task");
+});
+
+//With priority:
+scheduler.execute(() -&gt; {
+    System.out.println("High priority");
+}, 10);</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Schedule Repeating Task</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Schedule Interval</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>scheduler.scheduleAtInterval(() -&gt; {
+    System.out.println("Runs every second");
+}, 1000);
+
+// With initial delay + interval:
+scheduler.scheduleAtInterval(() -&gt; {
+    System.out.println("Delayed + repeating");
+}, 2000, 1000);
+
+// Using TimeUnit:
+scheduler.scheduleAtInterval(() -&gt; {
+    System.out.println("Interval with TimeUnit");
+}, 1, 2, TimeUnit.SECONDS);</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Create Unscheduled Task</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Unscheduled Task</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>Task task = scheduler.createUnscheduledTask(() -&gt; {
+    System.out.println("Run with delay");
+}, delay);
+
+// With initial delay + interval:
+Task task = scheduler.createUnscheduledTask(() -&gt; {
+    System.out.println("Delayed + repeating");
+}, 2000, 1000);
+
+// Schedule task:
+task.schedule();</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Tasks</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Tasks</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>Task task = scheduler.execute("my-task", () -&gt; {
+    System.out.println("Named task");
+});
+
+task.get(); // wait indefinitely
+
+task.get(5000); // wait with timeout (ms)
+
+task.get(5, TimeUnit.SECONDS);
+
+// Cancel task
+task.cancel();
+
+// Debug (JSON)
+task.toJson();
+
+// Async finally
+task.onFinally(() -&gt; {
+    task.schedule();
+});
+
+// Async catch error
+task.onCatch((Exception ex) -&gt; {
+    ex.printStackTrace();
+});</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Task Listeners</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Task Listeners</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>Scheduler scheduler = new Scheduler();
+
+scheduler.addTaskListener(new TaskListener() {
+    @Override
+    public void onTaskStarted(Task task) {
+        System.out.println("STARTED " + task);
+    }
+
+    @Override
+    public void onTaskCompleted(Task task) {
+        System.out.println("COMPLETED " + task);
+    }
+
+    @Override
+    public void onTaskCanceled(Task task) {
+        System.out.println("CANCELED " + task);
+    }
+
+    @Override
+    public void onTaskAdded(Task task) {
+        System.out.println("ADDED " + task);
+    }
+});
+
+scheduler.addTaskListener(new TaskListenerAdapter() {
+    @Override
+    public void onTaskAdded(Task task) {
+        System.out.println("ADDED 2" + task);
+    }
+});</code></pre>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -208,58 +355,93 @@
         <div>
           <h2 class="section-title">Service abstraction</h2>
           <p class="section-copy">
-            `Service<T>` extends `Scheduler` and is meant for recurring background workers that need a startup step and then a periodic execution loop.
+            The README also includes service-specific examples, reproduced below in the same simple style.
           </p>
         </div>
       </div>
 
-      <div class="split">
-        <div class="codebox">
-          <div class="codebar">
-            <div class="codebar-left" aria-hidden="true">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="code-title">Service class</span>
+      <div class="examples-grid">
+        <article class="example-card">
+          <h3>Creating a Service</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Creating a Service</span>
+              </div>
+              <div class="code-lang">Java</div>
             </div>
-            <div class="code-lang">Java</div>
-          </div>
-          <pre><code><span class="code-line"><span class="tok-kw">public</span> <span class="tok-kw">class</span> MyService <span class="tok-kw">extends</span> <span class="tok-type">Service</span>&lt;<span class="tok-type">String</span>&gt; {</span>
-<span class="code-line">    <span class="tok-kw">public</span> MyService() {</span>
-<span class="code-line">        <span class="tok-kw">super</span>(<span class="tok-str">"MyService"</span>, <span class="tok-num">1_000</span>);</span>
-<span class="code-line">    }</span>
-<span class="code-line"></span>
-<span class="code-line">    <span class="tok-ann">@Override</span></span>
-<span class="code-line">    <span class="tok-kw">protected</span> <span class="tok-kw">void</span> <span class="tok-fn">startup</span>() {</span>
-<span class="code-line">        <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Service started"</span>);</span>
-<span class="code-line">    }</span>
-<span class="code-line"></span>
-<span class="code-line">    <span class="tok-ann">@Override</span></span>
-<span class="code-line">    <span class="tok-kw">protected</span> <span class="tok-kw">void</span> <span class="tok-fn">execute</span>() {</span>
-<span class="code-line">        <span class="tok-type">System</span>.<span class="tok-fn">out</span>.<span class="tok-fn">println</span>(<span class="tok-str">"Running job"</span>);</span>
-<span class="code-line">    }</span>
-<span class="code-line">}</span></code></pre>
-        </div>
+            <pre><code>public class MyService extends Service&lt;String&gt; {
 
-        <div class="codebox">
-          <div class="codebar">
-            <div class="codebar-left" aria-hidden="true">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="code-title">Service usage</span>
-            </div>
-            <div class="code-lang">Java</div>
+    public MyService() {
+        super("MyService", 1000);
+    }
+
+    @Override
+    protected void startup() {
+        System.out.println("Service started");
+    }
+
+    @Override
+    protected void execute() {
+        System.out.println("Running task");
+    }
+}
+// Start Service
+MyService service = new MyService();
+service.start();
+
+// Stop Service
+service.shutdown();
+
+// Interval Control
+service.setInterval(2000);</code></pre>
           </div>
-          <pre><code><span class="code-line"><span class="tok-type">MyService</span> service = <span class="tok-kw">new</span> <span class="tok-type">MyService</span>();</span>
-<span class="code-line">service.<span class="tok-fn">start</span>();</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Change execution interval</span></span>
-<span class="code-line">service.<span class="tok-fn">setInterval</span>(<span class="tok-num">2_000</span>);</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Force a run on demand</span></span>
-<span class="code-line">service.<span class="tok-fn">forceExecute</span>();</span>
-<span class="code-line">service.<span class="tok-fn">forceExecuteAsync</span>();</span>
-<span class="code-line"></span>
-<span class="code-line"><span class="tok-com">// Stop service</span></span>
-<span class="code-line">service.<span class="tok-fn">shutdown</span>();</span></code></pre>
-        </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Service Manual Execution</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Service Manual Execution</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>// Synchronous
+service.forceExecute(); 
+
+service.forceExecute(5000); // wait up to 5s
+
+// Asynchronous
+service.forceExecuteAsync();</code></pre>
+          </div>
+        </article>
+
+        <article class="example-card">
+          <h3>Service Listeners</h3>
+          <div class="codebox">
+            <div class="codebar">
+              <div class="codebar-left" aria-hidden="true">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="code-title">Service Listeners</span>
+              </div>
+              <div class="code-lang">Java</div>
+            </div>
+            <pre><code>service.getListeners().add(new ServiceListener() {
+    @Override
+    public void beforeExecute() {
+        System.out.println("Before execution");
+    }
+
+    @Override
+    public void afterExecute() {
+        System.out.println("After execution");
+    }
+});</code></pre>
+          </div>
+        </article>
       </div>
 
       <div style="height:18px"></div>
@@ -425,5 +607,122 @@
       <div>Static HTML - English - GitHub-ready</div>
     </div>
   </footer>
+  <script>
+    (() => {
+      const keywords = [
+        'abstract','assert','boolean','break','byte','case','catch','char','class','const','continue','default',
+        'do','double','else','enum','extends','final','finally','float','for','goto','if','implements','import',
+        'instanceof','int','interface','long','native','new','package','private','protected','public','return',
+        'short','static','strictfp','super','switch','synchronized','this','throw','throws','transient','try',
+        'void','volatile','while','var','record','sealed','non-sealed','permits','true','false','null'
+      ];
+      const types = new Set(['Scheduler', 'Task', 'Service', 'TaskListener', 'TaskListenerAdapter', 'ServiceListener', 'TaskRunnable', 'TaskException', 'String', 'Exception', 'TimeUnit', 'System', 'MyService']);
+      const multiOps = ['==', '!=', '<=', '>=', '&&', '||', '->', '++', '--'];
+      const singleOps = new Set(['=', '!', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^', '~', '?', ':', ';', ',', '.', '(', ')', '{', '}', '[', ']']);
+
+      const escapeHtml = (value) => value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      const wrap = (cls, text) => `<span class="${cls}">${escapeHtml(text)}</span>`;
+
+      const tokenize = (line) => {
+        let html = '';
+        let i = 0;
+
+        const isIdentStart = (ch) => /[A-Za-z_$]/.test(ch);
+        const isIdentPart = (ch) => /[A-Za-z0-9_$-]/.test(ch);
+
+        while (i < line.length) {
+          if (line[i] === '/' && line[i + 1] === '/') {
+            html += wrap('tok-com', line.slice(i));
+            break;
+          }
+
+          if (line[i] === '"' || line[i] === '\'') {
+            const quote = line[i];
+            let j = i + 1;
+            while (j < line.length) {
+              if (line[j] === '\\') {
+                j += 2;
+                continue;
+              }
+              if (line[j] === quote) {
+                j++;
+                break;
+              }
+              j++;
+            }
+            html += wrap('tok-str', line.slice(i, j));
+            i = j;
+            continue;
+          }
+
+          if (line[i] === '@') {
+            let j = i + 1;
+            while (j < line.length && isIdentPart(line[j])) j++;
+            html += wrap('tok-ann', line.slice(i, j));
+            i = j;
+            continue;
+          }
+
+          const op = multiOps.find((token) => line.startsWith(token, i));
+          if (op) {
+            html += wrap('tok-op', op);
+            i += op.length;
+            continue;
+          }
+
+          if (singleOps.has(line[i])) {
+            html += wrap('tok-op', line[i]);
+            i++;
+            continue;
+          }
+
+          if (/\d/.test(line[i])) {
+            let j = i + 1;
+            while (j < line.length && /[\d_]/.test(line[j])) j++;
+            html += wrap('tok-num', line.slice(i, j));
+            i = j;
+            continue;
+          }
+
+          if (isIdentStart(line[i])) {
+            let j = i + 1;
+            while (j < line.length && isIdentPart(line[j])) j++;
+            const word = line.slice(i, j);
+            const prev = line.slice(0, i).trimEnd();
+            const next = line.slice(j).trimStart();
+            if (keywords.includes(word)) {
+              html += wrap('tok-kw', word);
+            } else if (types.has(word)) {
+              html += wrap('tok-type', word);
+            } else if (next.startsWith('(')) {
+              html += wrap('tok-fn', word);
+            } else if (prev.endsWith('new')) {
+              html += wrap('tok-kw', word);
+            } else {
+              html += escapeHtml(word);
+            }
+            i = j;
+            continue;
+          }
+
+          html += escapeHtml(line[i]);
+          i++;
+        }
+
+        return html;
+      };
+
+      document.querySelectorAll('.codebox pre code').forEach((block) => {
+        const lines = block.textContent.replace(/\r\n/g, '\n').split('\n');
+        block.innerHTML = lines.map((line) => tokenize(line)).join('\n');
+      });
+    })();
+  </script>
 </body>
 </html>
