@@ -176,6 +176,10 @@ public class Scheduler {
         return schedule(null, callable, delay, 0);
     }
 
+    public <T> T schedule(String name, Callable<T> callable, long delay) throws Exception {
+        return schedule(name, callable, delay, 0);
+    }
+
     public <T> T schedule(Callable<T> callable, long delay, int priority) throws Exception {
         return schedule(null, callable, delay, priority);
     }
@@ -269,6 +273,9 @@ public class Scheduler {
     }
 
     protected synchronized void addTask(Task task) {
+        if(isShutdown){
+            throw new RuntimeException("Scheduler " + getName() + " has been shut down and cannot accept new tasks");
+        }
         if (!addToExecutorTask(task)) {
 
             sortTask(task);
@@ -530,6 +537,9 @@ public class Scheduler {
     }
 
     protected synchronized void getNextTask(Executor executorTask) {
+        if (isShutdown) {
+            return;
+        }
         if (executorTask != null) {
             executorTask.setTask(getNextTask());
         }
@@ -616,24 +626,22 @@ public class Scheduler {
         }
         ALL_ALIVE_SCHEDULERS.remove(this);
         synchronized (this) {
-            for (Executor ex : executors) {
-                if (ex != null) {
-                    ex.shutdown();
-                }
-            }
             Executor current = getExecutorTaskByThread(Thread.currentThread());
 
             for (Executor exec : executors) {
                 if (exec != null) {
+                    exec.shutdown();
                     if (current == null || !current.equals(exec)) {
                         try {
-                            exec.shutdown();
                             exec.getThread().join();
                         } catch (InterruptedException ex) {
                             ex.printStackTrace();
                         }
                     }
                 }
+            }
+            for (Task task : tasks) {
+                task.cancel();
             }
         }
         executeOnShutdown();

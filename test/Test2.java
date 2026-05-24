@@ -20,10 +20,12 @@ public class Test2 {
         s.start();
         Task t = s.scheduleAtInterval(() -> {
             System.out.println("exx");
-            s.schedule(() -> {
-            
-            }, 0);
-        }, 1000);
+            System.out.println(10 / 0);
+        }, 1000).onCatch((Exception ex) -> {
+            System.out.println("error");
+        }).onFinally(() -> {
+            System.out.println("eee");
+        });
         s.schedule("c", () -> {
             t.cancel();
             System.out.println("cancel");

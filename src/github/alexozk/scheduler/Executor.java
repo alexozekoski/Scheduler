@@ -122,6 +122,9 @@ public abstract class Executor implements Runnable {
 
     public synchronized void shutdown() {
         this.runnig = false;
+        if(task != null && !inExecution){
+            task.cancel();
+        }
         notifyAll();
     }
 

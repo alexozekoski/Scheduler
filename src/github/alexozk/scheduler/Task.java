@@ -109,9 +109,8 @@ public class Task implements Comparable<Task> {
 
     }
 
-
     public synchronized Task cancel() {
-        if(isCompleted()){
+        if (isCompleted()) {
             return this;
         }
         this.canceled = true;
@@ -182,8 +181,9 @@ public class Task implements Comparable<Task> {
 
                 }
             }
-
-            wait(timeout);
+            if (!scheduler.isShutdown()) {
+                wait(timeout);
+            }
         }
     }
 
