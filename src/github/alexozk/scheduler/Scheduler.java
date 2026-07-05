@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 public class Scheduler {
 
     public static boolean SHOW_WARNINGS = true;
+    
+    public static boolean ALLOW_VIRTUAL_THREADS = true;
 
     public static final List<Scheduler> ALL_ALIVE_SCHEDULERS = Collections.synchronizedList(new ArrayList());
 
@@ -103,8 +105,8 @@ public class Scheduler {
 
     public Scheduler(String name, int executors, int logsSize, boolean virtualThread) {
         setLogSize(logsSize);
-        this.name = name == null ? "Scheduler@" + hashCode() : name;
-        this.virtualThread = virtualThread && Runtime.version().feature() >= 21;
+        this.name = name == null ? getClass().getName() + "@" + hashCode() : name;
+        this.virtualThread = virtualThread && Runtime.version().feature() >= 21 && ALLOW_VIRTUAL_THREADS;
         this.executors = new Executor[executors];
     }
 
@@ -651,6 +653,10 @@ public class Scheduler {
     public boolean isShutdown() {
         return isShutdown;
     }
+    
+    public boolean isStarted(){
+        return started;
+    }
 
     public synchronized int getNotIntervalTasksSize() {
         int countTask = 0;
@@ -934,5 +940,27 @@ public class Scheduler {
         for (TaskListener listener : listeners) {
             listener.onTaskAdded(task);
         }
+    }
+    
+    public String getTasks(){
+        List<Task> tasks = getCopyTasks();
+        StringBuilder str = new StringBuilder();
+        str.append("[\n");
+        boolean first = true;
+        for (Task task : tasks) {
+            if(first){
+                first = false;
+            }else{
+               str.append(",\n"); 
+            }
+            str.append(" ");
+            str.append(task.toJson()); 
+        }
+        str.append("\n]");
+        return str.toString();
+    }
+    
+    public void printTask(){
+        System.out.println(getTasks());
     }
 }

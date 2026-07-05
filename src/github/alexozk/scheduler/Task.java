@@ -195,6 +195,15 @@ public class Task implements Comparable<Task> {
         get(0);
     }
 
+    public Task getSkippingInterrupted(long timeout) {
+        try {
+            get(timeout);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        }
+        return this;
+    }
+
     public Task getSkippingInterrupted() {
         try {
             get(0);
